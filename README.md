@@ -117,7 +117,6 @@ npx aldareth queue:work --queue emails,notifications --max-time 300 --stop-when-
 | `ALDARETH_USER`    | MySQL user                          | -           |
 | `ALDARETH_PASSWORD`| MySQL password                      | -           |
 | `ALDARETH_DATABASE`| MySQL database                      | -           |
-| `ALDARETH_CHARSET` | MySQL charset                       | -           |
 | `ALDARETH_SOCKET`  | MySQL socket path                   | -           |
 | `ALDARETH_PREFIX`  | Table prefix (e.g. `aldareth_`)    | `aldareth_` |
 | `ALDARETH_MODULE`  | Path to aldareth config module       | `src/aldareth.ts` |
@@ -146,9 +145,9 @@ npx aldareth queue:work --queue emails,notifications --max-time 300 --stop-when-
 
 ### `AldarethConfigOptions`
 
-| Option             | Type      | Default       | Description                         |
-| ------------------ | --------- | ------------- | ----------------------------------- |
-| `prefix`           | `string`  | `'aldareth_'` | Table prefix for namespacing        |
+| Option | Type      | Default       | Description                         |
+| ------ | --------- | ------------- | ----------------------------------- |
+| `prefix` | `string` | `'aldareth_'` | Table prefix for namespacing        |
 | `removeOnComplete` | `boolean` | `true`        | Remove completed jobs automatically |
 
 ### Job Properties

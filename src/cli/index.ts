@@ -14,7 +14,6 @@ function buildConnection() {
         user: process.env.ALDARETH_USER,
         password: process.env.ALDARETH_PASSWORD,
         database: process.env.ALDARETH_DATABASE,
-        charset: process.env.ALDARETH_CHARSET,
         socketPath: process.env.ALDARETH_SOCKET,
     };
 }

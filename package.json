@@ -1,6 +1,6 @@
 {
     "name": "aldareth",
-    "version": "0.1.0",
+    "version": "0.1.0-beta.1",
     "description": "Queue and scheduler for Node.js",
     "type": "module",
     "main": "./dist/index.js",
