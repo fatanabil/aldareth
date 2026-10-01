@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+*.tsbuildinfo
+
+# hasil npm pack
+*.tgz
+
+# secrets dan env lokal
+.env
+.env.*
+!.env.example
+
+# log dan artefak uji
+*.log
+logs/
+processed.log
+coverage/
+
+# OS dan editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# AI
+.claude
+.codegraph
