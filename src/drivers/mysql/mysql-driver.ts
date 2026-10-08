@@ -152,6 +152,18 @@ export class MysqlDriver implements QueueDriver {
         return failed.affectedRows + requeued.affectedRows;
     }
 
+    async hasActive(name: string): Promise<boolean> {
+        const rows = await this.query<RowDataPacket[]>(
+            `SELECT 1 AS active
+        FROM ${this.table}
+        WHERE name = ?
+            AND status IN ('pending', 'processing')
+        LIMIT 1`,
+            [name],
+        );
+        return rows.length > 0;
+    }
+
     async close(): Promise<void> {
         await this.pool.end();
     }
