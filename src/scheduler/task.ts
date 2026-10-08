@@ -64,6 +64,10 @@ export class ScheduleTask {
         const [h, m] = this.parse(time);
         return this.cron(`${m} ${h} ${day} * *`);
     }
+    monthlyOnLastDate(time = '00:00') {
+        const [h, m] = this.parse(time);
+        return this.cron(`${m} ${h} L * *`);
+    }
     timezone(tz: string) {
         this.tz = tz;
         return this;
