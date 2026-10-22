@@ -1,4 +1,5 @@
 import { QueueDriver } from '../drivers/driver.js';
+import { createDriver } from '../drivers/resolve.js';
 import { DispatchOptions, Job, JobClass } from './job.js';
 
 let defaultQueue: Queue | undefined;
@@ -6,7 +7,8 @@ export const setDefaultQueue = (q: Queue) => {
     defaultQueue = q;
 };
 export function getDefaultQueue(): Queue {
-    if (!defaultQueue) throw new Error('Aldareth not config yet, call createAldareth() first');
+    // static dispatch hanya butuh driver, jadi queue dibangun dari env — tanpa config module pun jalan
+    defaultQueue ??= new Queue(createDriver());
     return defaultQueue;
 }
 

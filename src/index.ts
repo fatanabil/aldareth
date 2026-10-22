@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { Job, JobClass, DispatchOptions } from './core/job.js';
 import { MysqlDriver } from './drivers/mysql/mysql-driver.js';
+import { createDriver, driverFromUri, resolveDriver } from './drivers/resolve.js';
 import { Registry } from './core/registry.js';
 import { Queue, setDefaultQueue, getDefaultQueue } from './core/queue.js';
 import { Worker } from './worker/worker.js';
@@ -19,8 +20,13 @@ export type ScheduleConfig =
     | string
     | ((schedule: Schedule) => void);
 
+export type DriverKind = 'mysql' | 'mongodb';
+
 export interface AldarethConfig {
-    connection: PoolOptions;
+    /** Connection URI: mysql://user:pass@host:3306/db or mongodb://host:27017/db. PoolOptions is also accepted for MySQL. ALDARETH_DB_URL takes precedence over a URI. */
+    connection?: string | PoolOptions;
+    /** Driver to use. ALDARETH_DRIVER takes precedence; otherwise it follows the URI scheme. */
+    driver?: DriverKind;
     jobs: JobClass[];
     opts?: AldarethConfigOptions;
     schedule?: ScheduleConfig;
@@ -32,6 +38,8 @@ export interface ScheduleRunOptions {
 }
 
 export const defineConfig = (c: AldarethConfig) => c;
+
+export { driverFromUri, resolveDriver };
 
 async function resolveSchedule(config: ScheduleConfig | undefined): Promise<Schedule | undefined> {
     if (!config) return undefined;
@@ -52,7 +60,7 @@ async function resolveSchedule(config: ScheduleConfig | undefined): Promise<Sche
 }
 
 export function createAldareth(config: AldarethConfig) {
-    const driver = new MysqlDriver(config.connection, { prefix: config.opts?.prefix, removeOnComplete: config.opts?.removeOnComplete });
+    const driver = createDriver(config);
     const registry = new Registry();
     config.jobs.forEach((j) => registry.register(j));
     const queue = new Queue(driver);
@@ -150,6 +158,7 @@ export async function scheduleRun(schedule: Schedule, opts: ScheduleRunOptions =
 
 export { Job, Queue, Registry, MysqlDriver, getDefaultQueue };
 export type { JobClass, DispatchOptions };
+export { MongoDriver, type MongoDriverOptions } from './drivers/mongodb/mongodb-driver.js';
 export type { QueueDriver, ClaimedJob, NewJob } from './drivers/driver.js';
 export { Worker, type WorkerOptions, type WorkerResult } from './worker/worker.js';
 export { consoleReporter, type Reporter, type WorkerEvent } from './worker/reporter.js';
