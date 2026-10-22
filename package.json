@@ -1,6 +1,6 @@
 {
     "name": "aldareth",
-    "version": "0.1.0-beta.1",
+    "version": "0.1.0-beta.2",
     "description": "Queue and scheduler for Node.js",
     "type": "module",
     "main": "./dist/index.js",
@@ -8,7 +8,8 @@
     "exports": {
         ".": {
             "types": "./dist/index.d.ts",
-            "import": "./dist/index.js"
+            "import": "./dist/index.js",
+            "default": "./dist/index.js"
         }
     },
     "bin": {
@@ -16,7 +17,8 @@
     },
     "files": [
         "dist",
-        "migrations"
+        "migrations",
+        "CHANGELOG.md"
     ],
     "engines": {
         "node": ">=20"
@@ -29,9 +31,26 @@
         "prepublishOnly": "npm run typecheck && npm test && npm run build",
         "prepare": "npm run build"
     },
-    "keywords": [],
-    "author": "",
-    "license": "ISC",
+    "keywords": [
+        "queue",
+        "job-queue",
+        "worker",
+        "cron",
+        "scheduler",
+        "mysql",
+        "mongodb",
+        "typescript"
+    ],
+    "author": "Fata Nabil Fikri <fatanabil88@gmail.com>",
+    "license": "",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/fatanabil/aldareth.git"
+    },
+    "bugs": {
+        "url": "https://github.com/fatanabil/aldareth/issues"
+    },
+    "homepage": "https://github.com/fatanabil/aldareth#readme",
     "dependencies": {
         "croner": "^10.0.1",
         "mongodb": "^6.21.0",
