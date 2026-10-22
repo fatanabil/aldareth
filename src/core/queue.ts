@@ -14,10 +14,38 @@ export function getDefaultQueue(): Queue {
 
 const MAX_PAYLOAD_BYTES = 64 * 1024;
 
+// `await` pada Promise asli memakai slot internal, jadi hasil dispatch yang dibuang tidak terlihat.
+// Thenable membuat pemanggilnya bisa diamati: apa pun yang menangani hasil ini memanggil salah satu method di bawah.
+function mustAwait<T>(promise: Promise<T>): Promise<T> {
+    let handled = false;
+    const tracked = {
+        then(onFulfilled: any, onRejected: any) {
+            handled = true;
+            return promise.then(onFulfilled, onRejected);
+        },
+        catch(onRejected: any) {
+            handled = true;
+            return promise.catch(onRejected);
+        },
+        finally(onFinally: any) {
+            handled = true;
+            return promise.finally(onFinally);
+        },
+    };
+    setImmediate(() => {
+        if (!handled) console.warn('[aldareth] dispatch() result was not awaited — the job may never be enqueued.');
+    });
+    return tracked as unknown as Promise<T>;
+}
+
 export class Queue {
     constructor(private driver: QueueDriver) {}
 
-    async dispatch<J extends Job<any>>(cls: JobClass<J>, data: J['data'], opts: DispatchOptions = {}): Promise<string> {
+    dispatch<J extends Job<any>>(cls: JobClass<J>, data: J['data'], opts: DispatchOptions = {}): Promise<string> {
+        return mustAwait(this.send(cls, data, opts));
+    }
+
+    private async send<J extends Job<any>>(cls: JobClass<J>, data: J['data'], opts: DispatchOptions): Promise<string> {
         const probe = new cls();
         const payload = JSON.stringify(data ?? null);
         if (Buffer.byteLength(payload) > MAX_PAYLOAD_BYTES) {
