@@ -35,6 +35,8 @@ export interface AldarethConfig {
 export interface ScheduleRunOptions {
     intervalMs?: number;
     onEvent?: (e: ScheduleEvent) => void;
+    /** Run the tasks due for this minute, then return — for cron-driven hosts. */
+    once?: boolean;
 }
 
 export const defineConfig = (c: AldarethConfig) => c;
@@ -108,6 +110,7 @@ export function createAldareth(config: AldarethConfig) {
 
         // Run once immediately
         await _schedule.run();
+        if (opts.once) return;
 
         const intervalMs = opts.intervalMs ?? 60_000;
         let running = true;
@@ -130,12 +133,13 @@ export function createAldareth(config: AldarethConfig) {
 }
 
 export async function scheduleRun(schedule: Schedule, opts: ScheduleRunOptions = {}) {
-    if (opts.onEvent) {
-        schedule.opts = { ...schedule.opts, onEvent: opts.onEvent };
+    if (opts.onEvent || !schedule.opts.onEvent) {
+        schedule.opts = { ...schedule.opts, onEvent: opts.onEvent ?? consoleScheduleReporter };
     }
 
     // Run once immediately
     await schedule.run();
+    if (opts.once) return;
 
     const intervalMs = opts.intervalMs ?? 60_000;
     let running = true;
