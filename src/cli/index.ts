@@ -5,6 +5,7 @@ import { createRequire } from 'node:module';
 import { AldarethConfig, createAldareth, Worker, Schedule, consoleScheduleReporter, resolveDriver, type QueueDriver, type Registry } from '../index.js';
 import { MysqlDriver } from '../drivers/mysql/mysql-driver.js';
 import { MongoDriver } from '../drivers/mongodb/mongodb-driver.js';
+import { runInit } from './init.js';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
 import { hostname } from 'node:os';
@@ -172,6 +173,10 @@ async function main() {
             const result = await worker.run();
             console.log(`[aldareth] completed, ${result.processed} job processed`);
             process.exit(result.timedOut ? 1 : 0);
+        }
+        case 'init': {
+            await runInit(values.dir ?? positionals[0]);
+            return;
         }
         default:
             console.error(`Command unknown: ${command ?? '(blank)'}`);
