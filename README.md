@@ -12,6 +12,7 @@ A reliable job queue and scheduler for Node.js, powered by MySQL.
 - **Multi-queue support** — Organize jobs into different queues with priority
 - **Graceful shutdown** — Workers finish in-progress jobs before stopping
 - **Event reporting** — Hook into worker lifecycle events
+- **Cron-based scheduler** — Schedule jobs with cron expressions and timezone support
 
 ## Requirements
 
@@ -106,6 +107,9 @@ npx aldareth queue:work
 
 # With options
 npx aldareth queue:work --queue emails,notifications --max-time 300 --stop-when-empty
+
+# Run scheduler
+npx aldareth schedule:run
 ```
 
 ## Environment Variables
@@ -121,15 +125,30 @@ npx aldareth queue:work --queue emails,notifications --max-time 300 --stop-when-
 | `ALDARETH_PREFIX`  | Table prefix (e.g. `aldareth_`)    | `aldareth_` |
 | `ALDARETH_MODULE`  | Path to aldareth config module       | `src/aldareth.ts` |
 
-## CLI Options
+## CLI Commands
 
-| Option              | Description                        | Default       |
-| ------------------- | ---------------------------------- | ------------- |
-| `--queue`           | Queue names (comma-separated)      | `default`     |
-| `--max-time`        | Max runtime in seconds             | `50`          |
-| `--max-jobs`        | Max jobs to process before exiting | -             |
-| `--stop-when-empty` | Exit when queue is empty           | `false`       |
-| `--module`          | Path to aldareth config module      | `src/aldareth.ts` |
+| Command | Description |
+| ------- | ----------- |
+| `migrate` | Run database migrations |
+| `queue:work` | Start a queue worker |
+| `schedule:run` | Start the scheduler (polls every 60s) |
+
+### CLI Options
+
+**`queue:work` options:**
+
+| Option | Description | Default |
+| ------ | ----------- | ------- |
+| `--queue` | Queue names (comma-separated) | `default` |
+| `--max-time` | Max runtime in seconds | `50` |
+| `--max-jobs` | Max jobs to process before exiting | - |
+| `--stop-when-empty` | Exit when queue is empty | `false` |
+
+**`schedule:run` options:**
+
+| Option | Description | Default |
+| ------ | ----------- | ------- |
+| `--module` | Path to aldareth config module | `src/aldareth.ts` |
 
 ## Configuration
 
@@ -140,6 +159,7 @@ npx aldareth queue:work --queue emails,notifications --max-time 300 --stop-when-
 | `connection` | `PoolOptions`           | Auto     | env     |
 | `jobs`       | `JobClass[]`            | Yes      | -       |
 | `opts`       | `AldarethConfigOptions` | No       | `{}`    |
+| `schedule`   | `Schedule \| string \| fn` | No   | -       |
 
 > **Note:** `connection` is automatically populated from environment variables. You only need to specify `jobs` and optionally `opts`.
 
@@ -149,6 +169,14 @@ npx aldareth queue:work --queue emails,notifications --max-time 300 --stop-when-
 | ------ | --------- | ------------- | ----------------------------------- |
 | `prefix` | `string` | `'aldareth_'` | Table prefix for namespacing        |
 | `removeOnComplete` | `boolean` | `true`        | Remove completed jobs automatically |
+
+### `ScheduleOptions`
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `timezone` | `string` | `'UTC'` | Default timezone for tasks |
+| `hasActive` | `fn` | - | Check if queue has active jobs (required for `withoutOverlapping`) |
+| `onEvent` | `fn` | `consoleScheduleReporter` | Event reporter |
 
 ### Job Properties
 
@@ -173,6 +201,97 @@ npx aldareth queue:work --queue emails,notifications --max-time 300 --stop-when-
 | `graceMs`       | `number`   | `5000`               | Grace period before hard stop  |
 | `workerId`      | `string`   | `${hostname}:${pid}` | Unique worker identifier       |
 | `reporter`      | `Reporter` | `consoleReporter`    | Event reporter                 |
+
+## Scheduler
+
+The scheduler lets you run jobs on a cron-based schedule with timezone support.
+
+### Defining a Schedule
+
+```typescript
+// src/aldareth.ts
+import { createAldareth } from 'aldareth';
+import { SendReportJob } from './jobs/send-report.js';
+import { Schedule } from 'aldareth';
+
+const schedule = new Schedule();
+schedule.job(SendReportJob).dailyAt('08:00').timezone('Asia/Jakarta');
+schedule.fn(
+    { jobName: 'cleanup', handle: async () => { /* cleanup logic */ } },
+).everyFiveMinutes();
+
+export default createAldareth({
+    jobs: [SendReportJob],
+    schedule,
+});
+```
+
+### Scheduling Methods
+
+| Method | Cron Equivalent | Description |
+| ------ | --------------- | ----------- |
+| `everyMinute()` | `* * * * *` | Run every minute |
+| `everyMinutes(n)` | `*/n * * * *` | Run every n minutes (1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30) |
+| `everyFiveMinutes()` | `*/5 * * * *` | Run every 5 minutes |
+| `hourlyAt(minute)` | `${minute} * * * *` | Run at specific minute past every hour |
+| `dailyAt(time)` | `${m} ${h} * * *` | Run daily at HH:MM (e.g. `08:00`) |
+| `weeklyOn(day, time)` | `${m} ${h} * * ${day}` | Run weekly on day (0=Sun..6=Sat) |
+| `monthlyOn(day, time)` | `${m} ${h} ${day} * *` | Run monthly on day 1-28 |
+| `monthlyOnLastDate(time)` | `${m} ${h} L * *` | Run monthly on the last day of the month |
+
+### Scheduler Options
+
+| Option | Type | Default | Description |
+| ------ | ---- | ------- | ----------- |
+| `timezone` | `string` | `'UTC'` | Default timezone for tasks |
+| `hasActive` | `(name) => Promise<boolean>` | - | Check if a queue has active jobs (for `withoutOverlapping`) |
+| `onEvent` | `(event) => void` | `consoleScheduleReporter` | Event reporter |
+
+### Task Options
+
+| Method | Description |
+| ------ | ----------- |
+| `timezone(tz)` | Override timezone for this task |
+| `withoutOverlapping()` | Skip run if previous job is still active/pending |
+| `name(n)` | Custom name for the task (defaults to `jobName`) |
+
+### Running the Scheduler
+
+```bash
+# Run scheduler (polls every 60 seconds)
+npx aldareth schedule:run
+
+# With custom module path
+npx aldareth schedule:run --module src/scheduler.ts
+```
+
+### Programmatic Usage
+
+```typescript
+import { scheduleRun } from 'aldareth';
+
+// Run schedule once or in a loop
+await scheduleRun(schedule, {
+    intervalMs: 60_000, // default: 60s
+    onEvent: (event) => {
+        if (event.type === 'schedule:dispatched') {
+            console.log(`${event.task} dispatched`);
+        } else if (event.type === 'schedule:skipped-overlap') {
+            console.log(`${event.task} skipped — still active`);
+        } else if (event.type === 'schedule:error') {
+            console.error(`${event.task} failed:`, event.error);
+        }
+    },
+});
+```
+
+### Scheduler Events
+
+| Event | Description |
+| ----- | ----------- |
+| `schedule:dispatched` | Task was dispatched |
+| `schedule:skipped-overlap` | Task skipped because `withoutOverlapping` returned true |
+| `schedule:error` | Task handler threw an error |
 
 ## Event Reporting
 
@@ -255,6 +374,8 @@ CREATE TABLE aldareth_jobs (
 - **Registry** — Maps job names to job classes
 - **Queue** — Enqueues jobs via the driver
 - **Worker** — Polls for pending jobs, claims them with a lease, and processes them
+- **Schedule** — Manages cron-based scheduled dispatching of jobs
+- **Cron** — Evaluates cron expressions with timezone awareness (via `croner`)
 
 ## License
 

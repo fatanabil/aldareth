@@ -24,5 +24,6 @@ export interface QueueDriver {
     fail(id: string, token: string, error: string): Promise<boolean>;
     release(id: string, token: string): Promise<boolean>;
     recoverExpired(): Promise<number>;
+    hasActive(name: string): Promise<boolean>;
     close(): Promise<void>;
 }

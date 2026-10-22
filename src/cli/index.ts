@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { pathToFileURL } from 'node:url';
-import { AldarethConfig, createAldareth, Worker } from '../index.js';
+import { AldarethConfig, createAldareth, Worker, Schedule, consoleScheduleReporter, type ScheduleEvent } from '../index.js';
 import { MysqlDriver } from '../drivers/mysql/mysql-driver.js';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
@@ -44,6 +44,55 @@ async function main() {
             console.log('[aldareth] migration completed');
             return;
         }
+        case 'schedule:run': {
+            const schedulePath = values.module ?? process.env.ALDARETH_MODULE ?? 'src/aldareth.ts';
+            let schedule: Schedule;
+            let driver: MysqlDriver | undefined;
+
+            try {
+                const url = pathToFileURL(path.resolve(process.cwd(), schedulePath)).href;
+                const mod = await import(url);
+
+                if (mod.default instanceof Schedule) {
+                    schedule = mod.default;
+                } else {
+                    throw new Error(`Module '${schedulePath}' must export a Schedule instance as default export`);
+                }
+
+                // If schedule has no event handler, use console reporter
+                if (!schedule.opts?.onEvent) {
+                    schedule.opts = { ...schedule.opts, onEvent: consoleScheduleReporter };
+                }
+            } catch (err) {
+                console.error(`[aldareth] failed to load schedule module '${schedulePath}':`, err instanceof Error ? err.message : err);
+                process.exit(1);
+            }
+
+            console.log('[aldareth] scheduler started, press Ctrl+C to stop');
+
+            // Run once immediately, then loop every minute
+            await schedule.run();
+
+            const intervalMs = 60_000;
+            let running = true;
+            const stop = () => { running = false; };
+            process.on('SIGINT', stop);
+            process.on('SIGTERM', stop);
+
+            while (running) {
+                await new Promise(resolve => setTimeout(resolve, intervalMs));
+                if (!running) break;
+                try {
+                    await schedule.run();
+                } catch (err) {
+                    console.error('[aldareth] schedule run error:', err instanceof Error ? err.message : err);
+                }
+            }
+
+            console.log('[aldareth] scheduler stopped');
+            if (driver) await driver.close();
+            return;
+        }
         case 'queue:work': {
             // Load user's aldareth module — expected to export AldarethConfig or createAldareth result
             let config: AldarethConfig;
@@ -83,7 +132,7 @@ async function main() {
         }
         default:
             console.error(`Command unknown: ${command ?? '(blank)'}`);
-            console.error('available: migrate, queue:work');
+            console.error('available: migrate, queue:work, schedule:run');
             process.exit(1);
     }
 }
