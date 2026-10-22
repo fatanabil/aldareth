@@ -17,6 +17,7 @@ export interface ClaimedJob {
 }
 
 export interface QueueDriver {
+    migrate?(): Promise<void>;
     push(job: NewJob): Promise<string>;
     claim(opts: { queues: string[]; limit: number; workerId: string; leaseSeconds: number }): Promise<ClaimedJob[]>;
     complete(id: string, token: string): Promise<boolean>;

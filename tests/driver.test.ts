@@ -57,3 +57,10 @@ it('worker lama tidak bisa menyelesaikan job yang sudah di-claim ulang', async (
     expect(await d.complete(id, second!.lockToken)).toBe(true);
     await d.close();
 });
+
+it('driver bisa dibuat dari URI', async () => {
+    const uri = `mysql://${conn.user}:${conn.password}@${conn.host}:${conn.port}/aldareth_test`;
+    const d = new MysqlDriver(uri, { prefix: 't_' });
+    expect(await d.push(job)).toBeTruthy();
+    await d.close();
+});

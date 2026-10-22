@@ -16,12 +16,17 @@ export class MysqlDriver implements QueueDriver {
     private prefix: string;
     private removeOnComplete: boolean;
 
-    constructor(connection: PoolOptions, opts: MysqlDriverOptions = {}) {
+    constructor(connection: string | PoolOptions, opts: MysqlDriverOptions = {}) {
+        if (typeof connection === 'string' && !/^mysql:\/\//i.test(connection)) {
+            throw new Error('MySQL URI harus dimulai dengan mysql://');
+        }
         const prefix = opts.prefix ?? 'aldareth_';
         if (!/^[A-Za-z0-9_]*$/.test(prefix)) throw new Error('Table prefix invalid');
         this.prefix = prefix;
         this.table = `\`${prefix}jobs\``;
-        this.pool = mysql.createPool({ ...connection, connectionLimit: 2 });
+        this.pool = mysql.createPool(
+            typeof connection === 'string' ? { uri: connection, connectionLimit: 2 } : { ...connection, connectionLimit: 2 },
+        );
         this.removeOnComplete = opts.removeOnComplete ?? true;
     }
 
