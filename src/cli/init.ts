@@ -42,9 +42,9 @@ scheduleRun(schedule, { once: true }).then(() => process.exit(0));
 };
 
 const SCRIPTS = (base: string): Record<string, string> => ({
-    migrate: 'aldareth migrate',
-    worker: `tsx ${path.posix.join(base, 'worker.ts')}`,
-    schedule: `tsx ${path.posix.join(base, 'run-schedule.ts')}`,
+    'aldareth:migrate': 'aldareth migrate',
+    'aldareth:worker': `tsx ${path.posix.join(base, 'worker.ts')}`,
+    'aldareth:schedule': `tsx ${path.posix.join(base, 'run-schedule.ts')}`,
 });
 
 const DOTENV = `ALDARETH_DB_URL=mysql://user:password@127.0.0.1:3306/aldareth\n`;
@@ -114,7 +114,7 @@ export async function runInit(dir?: string) {
             '  1. npm install --save-dev tsx',
             '  2. set ALDARETH_DB_URL in .env',
             '  3. npx aldareth migrate',
-            '  4. npm run worker   |   npm run schedule',
+            '  4. npm run aldareth:worker   |   npm run aldareth:schedule',
         ].join('\n'),
     );
 }
