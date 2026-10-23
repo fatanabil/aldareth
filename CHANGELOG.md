@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.0-beta.3
+
+- The library loads `.env` from the working directory when `ALDARETH_DB_URL` is unset — existing variables are never overridden; `ALDARETH_NO_DOTENV=1` disables it
+- `init` scaffolds the npm scripts as `aldareth:migrate`, `aldareth:worker` and `aldareth:schedule` so they cannot collide with the app's own `migrate`/`worker` scripts
+- The README uses the same script names throughout
+
 ## 0.1.0-beta.2
 
 - MongoDB driver with the same claim/lease/fencing protocol as MySQL
