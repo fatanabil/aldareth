@@ -38,7 +38,8 @@ npx aldareth init
 ```
 
 This writes `src/aldareth.ts` (the config module), `src/worker.ts`, `src/schedule.ts`,
-`src/run-schedule.ts`, a `.env` with a placeholder connection, and three npm scripts.
+`src/run-schedule.ts`, a `.env` with a placeholder connection, and three npm scripts
+(`aldareth:migrate`, `aldareth:worker`, `aldareth:schedule`).
 Nothing that already exists is overwritten, so it is safe to run twice.
 
 It asks where the files should go — press Enter to keep `src`:
@@ -108,7 +109,7 @@ export default createAldareth({
 ### 5. Create the queue storage
 
 ```bash
-npm run migrate
+npm run aldareth:migrate
 ```
 
 Once per database, before the first worker. It creates the table (MySQL) or the indexes
@@ -123,7 +124,7 @@ await SendEmailJob.dispatch({ to: 'user@example.com', subject: 'Hello' });
 ```
 
 ```bash
-npm run worker
+npm run aldareth:worker
 ```
 
 The worker picks the job up, runs `handle()`, and removes it when it is done.
@@ -146,8 +147,9 @@ Everything is resolved from the environment first, and from the config module se
   carries options a URI cannot express (`ssl`, `socketPath`), so it is always used as-is.
 - A URI whose scheme does not match the driver is rejected on startup.
 
-The CLI loads `.env` from the working directory by itself. The library does not — your app
-is responsible (`node --env-file=.env dist/server.js`, or dotenv).
+Both the CLI and the library load `.env` from the working directory when `ALDARETH_DB_URL`
+is not already set. The file never overrides an existing variable, so a production
+environment always wins. Set `ALDARETH_NO_DOTENV=1` to turn the file off.
 
 ```ts
 import { createAldareth, defineConfig } from 'aldareth';
@@ -462,17 +464,17 @@ Build first and run the compiled files in production — no TypeScript loader in
 ```json
 {
     "scripts": {
-        "migrate": "aldareth migrate",
-        "worker": "node dist/worker.js",
-        "schedule": "node dist/run-schedule.js"
+        "aldareth:migrate": "aldareth migrate",
+        "aldareth:worker": "node dist/worker.js",
+        "aldareth:schedule": "node dist/run-schedule.js"
     }
 }
 ```
 
 ```bash
-npm run migrate    # once per database
-npm run worker     # as many as you like
-npm run schedule   # exactly one, or accept duplicate cron triggers
+npm run aldareth:migrate    # once per database
+npm run aldareth:worker     # as many as you like
+npm run aldareth:schedule   # exactly one, or accept duplicate cron triggers
 ```
 
 - Workers coordinate through the database, so several of them can run at the same time
@@ -487,7 +489,7 @@ npm run schedule   # exactly one, or accept duplicate cron triggers
 ```bash
 # .env
 ALDARETH_DB_URL=mongodb://127.0.0.1:27017/aldareth
-npm run migrate
+npm run aldareth:migrate
 ```
 
 `migrate` creates the indexes the queue needs — there is no schema to apply. The URI has to
@@ -500,14 +502,14 @@ standalone `mongod` is enough — no replica set, no transactions.
 
 | Message / symptom                                   | Cause                                                  | Fix                                                        |
 | --------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------- |
-| `Koneksi database belum diatur`                     | Dispatch with no `ALDARETH_DB_URL` in the process       | Load `.env` first (`node --env-file=.env` or dotenv)        |
+| `Koneksi database belum diatur`                     | No `ALDARETH_DB_URL` in the env and no `.env` in the cwd | Set the env var, or put it in `<cwd>/.env`                  |
 | `dispatch() result was not awaited`                 | The dispatch result was dropped                         | `await Job.dispatch(...)`, or add a `.catch(...)`           |
 | `[aldareth] ALDARETH_DB_URL is required`            | `migrate` ran without a connection                      | Set the env var for the process                            |
 | `MySQL URI harus dimulai dengan mysql://`           | The URI scheme does not match the driver               | Use a `mysql://` URI, or set `ALDARETH_DRIVER=mysql`        |
 | `MongoDB URI harus dimulai dengan mongodb://`       | The URI scheme does not match the driver               | Use a `mongodb://` URI, or set `ALDARETH_DRIVER=mongodb`    |
 | `ALDARETH_DRIVER tidak dikenal`                    | The driver name is not `mysql` or `mongodb`             | Use one of the two names                                   |
 | `Timeout job melebihi max-time atau lease worker`   | The job's `timeout` is longer than the worker's limits  | Lower the job timeout or raise `maxTime`                   |
-| `Table 'aldareth_jobs' doesn't exist`               | The migration was never run                            | Run `npm run migrate`                                      |
+| `Table 'aldareth_jobs' doesn't exist`               | The migration was never run                            | Run `npm run aldareth:migrate`                             |
 | Jobs stay `processing` after a crash                | The worker died before releasing the job               | The lease expires and another worker picks the job up      |
 | `withoutOverlapping() needs hasActive`              | The schedule has no `hasActive`                        | Supply `hasActive` when creating the `Schedule`            |
 

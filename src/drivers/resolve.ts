@@ -19,7 +19,20 @@ function driverFromEnv(): DriverKind | undefined {
     return raw;
 }
 
+// .env dari cwd sebagai fallback: variabel yang sudah ada di environment tidak ditimpa,
+// jadi production tetap menang. ALDARETH_NO_DOTENV=1 mematikannya.
+function loadDotEnv(): void {
+    if (process.env.ALDARETH_NO_DOTENV) return;
+    if (typeof process.loadEnvFile !== 'function') return; // Node < 20.12
+    try {
+        process.loadEnvFile();
+    } catch {
+        // tidak ada .env — variabel bisa datang dari shell
+    }
+}
+
 export function createDriver(config: Partial<AldarethConfig> = {}): QueueDriver {
+    if (!process.env.ALDARETH_DB_URL && typeof config.connection !== 'object') loadDotEnv();
     const opts = {
         prefix: process.env.ALDARETH_PREFIX ?? config.opts?.prefix,
         removeOnComplete: config.opts?.removeOnComplete,
