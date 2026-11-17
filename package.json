@@ -13,7 +13,7 @@
         }
     },
     "bin": {
-        "aldareth": "./dist/cli/index.js"
+        "aldareth": "dist/cli/index.js"
     },
     "files": [
         "dist",
