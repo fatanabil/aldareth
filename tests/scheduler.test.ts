@@ -31,17 +31,17 @@ describe('Schedule.run', () => {
         const a = fakeJob('a'),
             b = fakeJob('b');
         const s = new Schedule();
-        s.job(a).everyFiveMinutes();
-        s.job(b).dailyAt('08:00').timezone('Asia/Jakarta');
+        s.job(a, {}).everyFiveMinutes();
+        s.job(b, {}).dailyAt('08:00').timezone('Asia/Jakarta');
         const r = await s.run(at('2026-10-02T10:15:30Z'));
-        expect(r).toEqual({ due: 1, dispatched: 1, failed: 0 });
+        expect(r).toEqual({ due: 1, dispatched: 1, ran: 0, failed: 0 });
         expect(a.dispatch).toHaveBeenCalledOnce();
         expect(b.dispatch).not.toHaveBeenCalled();
     });
     it('task tanpa frekuensi gagal keras, tidak ada yang terkirim', async () => {
         const a = fakeJob();
         const s = new Schedule();
-        s.job(a);
+        s.job(a, {});
         await expect(s.run()).rejects.toThrow(/frequency/);
         expect(a.dispatch).not.toHaveBeenCalled();
     });
@@ -49,27 +49,27 @@ describe('Schedule.run', () => {
         const bad = { jobName: 'bad', dispatch: vi.fn().mockRejectedValue(new Error('x')) };
         const ok = fakeJob('ok');
         const s = new Schedule();
-        s.job(bad).everyMinute();
-        s.job(ok).everyMinute();
+        s.job(bad, {}).everyMinute();
+        s.job(ok, {}).everyMinute();
         expect(await s.run()).toMatchObject({ dispatched: 1, failed: 1 });
     });
     it('withoutOverlapping melewati jika masih aktif', async () => {
         const a = fakeJob();
         const s = new Schedule({ hasActive: async () => true });
-        s.job(a).everyMinute().withoutOverlapping();
+        s.job(a, {}).everyMinute().withoutOverlapping();
         expect(await s.run()).toMatchObject({ due: 1, dispatched: 0 });
     });
     it('withoutOverlapping tanpa hasActive ditolak', async () => {
         const s = new Schedule();
-        s.job(fakeJob()).everyMinute().withoutOverlapping();
+        s.job(fakeJob(), {}).everyMinute().withoutOverlapping();
         await expect(s.run()).rejects.toThrow(/hasActive/);
     });
     it('ekspresi dan timezone invalid ditolak', async () => {
         const s = new Schedule();
-        s.job(fakeJob()).cron('bukan cron');
+        s.job(fakeJob(), {}).cron('bukan cron');
         await expect(s.run()).rejects.toThrow();
         const s2 = new Schedule();
-        s2.job(fakeJob()).everyMinute().timezone('Bukan/Zona');
+        s2.job(fakeJob(), {}).everyMinute().timezone('Bukan/Zona');
         await expect(s2.run()).rejects.toThrow();
     });
 });
