@@ -42,7 +42,7 @@
         "typescript"
     ],
     "author": "Fata Nabil Fikri <fatanabil88@gmail.com>",
-    "license": "",
+    "license": "ISC",
     "repository": {
         "type": "git",
         "url": "git+https://github.com/fatanabil/aldareth.git"
