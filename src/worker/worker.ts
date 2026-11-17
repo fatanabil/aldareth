@@ -1,18 +1,24 @@
+import { hostname } from 'node:os';
 import type { ClaimedJob, QueueDriver } from '../drivers/driver.js';
 import type { Registry } from '../core/registry.js';
 import { consoleReporter, type Reporter } from './reporter.js';
 
 export interface WorkerOptions {
-    queues: string[];
-    maxTimeMs: number;
+    queues?: string[];
+    maxTimeMs?: number;
     maxJobs?: number;
-    stopWhenEmpty: boolean;
-    pollMs: number;
-    leaseSeconds: number;
+    stopWhenEmpty?: boolean;
+    pollMs?: number;
+    leaseSeconds?: number;
     graceMs?: number;
-    workerId: string;
+    workerId?: string;
     reporter?: Reporter;
 }
+
+type ResolvedWorkerOptions = Required<Omit<WorkerOptions, 'maxJobs' | 'reporter'>> & {
+    maxJobs?: number;
+    reporter?: Reporter;
+};
 
 export interface WorkerResult {
     processed: number;
@@ -26,17 +32,30 @@ const MIN_START_MS = 1000;
 
 export class Worker {
     private emit: Reporter;
+    private opts: ResolvedWorkerOptions;
 
     constructor(
         private driver: QueueDriver,
         private registry: Registry,
-        private opts: WorkerOptions,
+        opts: WorkerOptions = {},
     ) {
-        this.emit = opts.reporter ?? consoleReporter;
+        const maxTimeMs = opts.maxTimeMs ?? 50000;
+        this.opts = {
+            queues: opts.queues ?? ['default'],
+            maxTimeMs,
+            stopWhenEmpty: opts.stopWhenEmpty ?? false,
+            pollMs: opts.pollMs ?? 1000,
+            leaseSeconds: opts.leaseSeconds ?? Math.ceil(maxTimeMs / 1000) + 60,
+            graceMs: opts.graceMs ?? 5000,
+            workerId: opts.workerId ?? `${hostname()}:${process.pid}`,
+            maxJobs: opts.maxJobs,
+            reporter: opts.reporter,
+        };
+        this.emit = this.opts.reporter ?? consoleReporter;
     }
 
     async run(): Promise<WorkerResult> {
-        const graceMs = this.opts.graceMs ?? 5000;
+        const graceMs = this.opts.graceMs;
         if (graceMs >= this.opts.maxTimeMs) {
             throw new Error(`graceMs (${graceMs}) must be less than maxTimeMs (${this.opts.maxTimeMs})`);
         }
@@ -79,7 +98,7 @@ export class Worker {
         const cls = this.registry.resolve(name);
 
         if (!cls) {
-            const error = `Handler tidak terdaftar: ${name}`;
+            const error = `No handler registered for job: ${name}`;
             this.emit({ type: 'job:fail', id, name, ms: 0, error });
             await this.settle(this.driver.fail(id, lockToken, error), id, name);
             return 'done';
@@ -92,7 +111,7 @@ export class Worker {
         const declaredMs = job.timeout !== undefined ? job.timeout * 1000 : undefined;
 
         if (declaredMs !== undefined && (declaredMs > this.opts.maxTimeMs || job.timeout! + 5 > this.opts.leaseSeconds)) {
-            const error = 'Timeout job melebihi max-time atau lease worker';
+            const error = 'Job timeout exceeds the worker max-time or lease';
             this.emit({ type: 'job:fail', id, name, ms: 0, error });
             await this.settle(this.driver.fail(id, lockToken, error), id, name);
             return 'done';
@@ -126,7 +145,7 @@ export class Worker {
                 try {
                     await job.failed?.(error);
                 } catch (e) {
-                    console.error(`[aldareth] hook failed() error pada job ${id}`, e);
+                    console.error(`[aldareth] failed() hook threw for job ${id}`, e);
                 }
             } else {
                 const delaySeconds = job.backoff[claimed.attempts - 1] ?? job.backoff.at(-1) ?? 60;
