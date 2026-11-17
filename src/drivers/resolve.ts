@@ -7,7 +7,7 @@ export function driverFromUri(uri: string): DriverKind {
     return /^mongodb(\+srv)?:\/\//i.test(uri) ? 'mongodb' : 'mysql';
 }
 
-/** ALDARETH_DRIVER > explicit > skema URI */
+/** ALDARETH_DRIVER > explicit > URI scheme */
 export function resolveDriver(uri: string, explicit?: DriverKind): DriverKind {
     return driverFromEnv() ?? explicit ?? driverFromUri(uri);
 }
@@ -15,19 +15,19 @@ export function resolveDriver(uri: string, explicit?: DriverKind): DriverKind {
 function driverFromEnv(): DriverKind | undefined {
     const raw = process.env.ALDARETH_DRIVER?.trim().toLowerCase();
     if (!raw) return undefined;
-    if (raw !== 'mysql' && raw !== 'mongodb') throw new Error(`ALDARETH_DRIVER tidak dikenal: ${raw} (pilihan: mysql, mongodb)`);
+    if (raw !== 'mysql' && raw !== 'mongodb') throw new Error(`Unknown ALDARETH_DRIVER: ${raw} (choose mysql or mongodb)`);
     return raw;
 }
 
-// .env dari cwd sebagai fallback: variabel yang sudah ada di environment tidak ditimpa,
-// jadi production tetap menang. ALDARETH_NO_DOTENV=1 mematikannya.
+// .env from the cwd as a fallback: variables already present in the environment are
+// never overwritten, so production always wins. ALDARETH_NO_DOTENV=1 disables it.
 function loadDotEnv(): void {
     if (process.env.ALDARETH_NO_DOTENV) return;
     if (typeof process.loadEnvFile !== 'function') return; // Node < 20.12
     try {
         process.loadEnvFile();
     } catch {
-        // tidak ada .env — variabel bisa datang dari shell
+        // no .env — the variables may come from the shell
     }
 }
 
@@ -38,14 +38,14 @@ export function createDriver(config: Partial<AldarethConfig> = {}): QueueDriver 
         removeOnComplete: config.opts?.removeOnComplete,
     };
 
-    // PoolOptions hanya bisa datang dari config — URI env tidak bisa membawa opsi seperti ssl/socketPath
+    // PoolOptions can only come from config — an env URI cannot carry options like ssl/socketPath
     if (typeof config.connection === 'object') {
-        if (driverFromEnv() === 'mongodb') throw new Error('ALDARETH_DRIVER=mongodb tidak cocok dengan PoolOptions (khusus MySQL)');
+        if (driverFromEnv() === 'mongodb') throw new Error('ALDARETH_DRIVER=mongodb does not match PoolOptions (MySQL only)');
         return new MysqlDriver(config.connection, opts);
     }
 
     const connection = process.env.ALDARETH_DB_URL ?? config.connection;
-    if (!connection) throw new Error('Koneksi database belum diatur — isi "connection" atau env ALDARETH_DB_URL');
+    if (!connection) throw new Error('Database connection is not configured — set "connection" or the ALDARETH_DB_URL env var');
     const kind = resolveDriver(connection, config.driver);
     return kind === 'mongodb' ? new MongoDriver(connection, opts) : new MysqlDriver(connection, opts);
 }

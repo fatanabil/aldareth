@@ -4,8 +4,8 @@ export class Registry {
     private map = new Map<string, JobClass>();
 
     register(cls: JobClass): void {
-        if (!cls.jobName) throw new Error('Job must have statc jobName');
-        if (this.map.has(cls.jobName)) throw new Error(`Job duplicate: ${cls.jobName}`);
+        if (!cls.jobName) throw new Error('Job must have a static jobName.');
+        if (this.map.has(cls.jobName)) throw new Error(`Duplicate job name: ${cls.jobName}`);
         this.map.set(cls.jobName, cls);
     }
 

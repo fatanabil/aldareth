@@ -18,7 +18,7 @@ export class MysqlDriver implements QueueDriver {
 
     constructor(connection: string | PoolOptions, opts: MysqlDriverOptions = {}) {
         if (typeof connection === 'string' && !/^mysql:\/\//i.test(connection)) {
-            throw new Error('MySQL URI harus dimulai dengan mysql://');
+            throw new Error('MySQL URI must start with mysql://');
         }
         const prefix = opts.prefix ?? 'aldareth_';
         if (!/^[A-Za-z0-9_]*$/.test(prefix)) throw new Error('Table prefix invalid');
@@ -142,10 +142,10 @@ export class MysqlDriver implements QueueDriver {
     }
 
     async recoverExpired(): Promise<number> {
-        // Yang percobaannya sudah habis -> failed; sisanya kembali ke antrean
+        // Attempts exhausted -> failed; the rest go back to the queue
         const failed = await this.exec(
             `UPDATE ${this.table} SET status='failed', locked_until=NULL, lock_token=NULL,
-         last_error='Lease kedaluwarsa dan percobaan habis', updated_at=UTC_TIMESTAMP()
+         last_error='Lease expired and attempts exhausted', updated_at=UTC_TIMESTAMP()
        WHERE status='processing' AND locked_until < UTC_TIMESTAMP() AND attempts >= max_attempts`,
             [],
         );

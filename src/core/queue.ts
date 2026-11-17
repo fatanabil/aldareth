@@ -49,7 +49,7 @@ export class Queue {
         const probe = new cls();
         const payload = JSON.stringify(data ?? null);
         if (Buffer.byteLength(payload) > MAX_PAYLOAD_BYTES) {
-            throw new Error('Payload exceed max size!');
+            throw new Error(`Payload exceeds the ${MAX_PAYLOAD_BYTES / 1024} KB limit.`);
         }
         return this.driver.push({
             queue: opts.queue ?? probe.queue,

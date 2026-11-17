@@ -33,10 +33,10 @@ const oneLine = (s: string) => s.replace(/\s+/g, ' ').slice(0, 200);
 export const consoleReporter: Reporter = (e) => {
     switch (e.type) {
         case 'worker:start':
-            console.log(`[aldareth] worker ${e.workerId} mulai (queue: ${e.queues.join(',')})`);
+            console.log(`[aldareth] worker ${e.workerId} started (queues: ${e.queues.join(',')})`);
             break;
         case 'worker:stop':
-            console.log(`[aldareth] worker berhenti, ${e.processed} job diproses${e.timedOut ? ' (ada timeout)' : ''}`);
+            console.log(`[aldareth] worker stopped, ${e.processed} job(s) processed${e.timedOut ? ' (timed out)' : ''}`);
             break;
         case 'job:start':
             row(e.name, 'RUNNING', 33);

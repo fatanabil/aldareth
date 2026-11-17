@@ -3,7 +3,7 @@ import { getDefaultQueue } from './queue.js';
 export type JobClass<J extends Job<any> = Job<any>> = (new () => J) & { jobName: string };
 
 export interface DispatchOptions {
-    delay?: number; // detik
+    delay?: number; // seconds
     queue?: string;
 }
 

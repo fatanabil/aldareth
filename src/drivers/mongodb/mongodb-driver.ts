@@ -34,7 +34,7 @@ function dbNameOf(uri: string): string {
     } catch {
         throw new Error('MongoDB URI invalid');
     }
-    if (!name) throw new Error('MongoDB URI harus menyebut nama database, contoh: mongodb://localhost:27017/aldareth');
+    if (!name) throw new Error('MongoDB URI must name a database, e.g. mongodb://localhost:27017/aldareth');
     return name;
 }
 
@@ -48,7 +48,7 @@ export class MongoDriver implements QueueDriver {
 
     constructor(uri: string, opts: MongoDriverOptions = {}) {
         if (!/^mongodb(\+srv)?:\/\//i.test(uri)) {
-            throw new Error('MongoDB URI harus dimulai dengan mongodb:// atau mongodb+srv://');
+            throw new Error('MongoDB URI must start with mongodb:// or mongodb+srv://');
         }
         const prefix = opts.prefix ?? 'aldareth_';
         if (!/^[A-Za-z0-9_]*$/.test(prefix)) throw new Error('Collection prefix invalid');
@@ -180,7 +180,7 @@ export class MongoDriver implements QueueDriver {
                     status: 'failed',
                     locked_until: null,
                     lock_token: null,
-                    last_error: 'Lease kedaluwarsa dan percobaan habis',
+                    last_error: 'Lease expired and attempts exhausted',
                     updated_at: now,
                 },
             },
