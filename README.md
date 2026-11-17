@@ -82,13 +82,13 @@ A job is a class with a unique name and a `handle()` method.
 
 ```ts
 // src/jobs/send-email.ts
-import { Job } from 'aldareth';
+import { Job } from "aldareth";
 
 export class SendEmailJob extends Job {
-    static jobName = 'send-email';
+    static jobName = "send-email";
 
     async handle() {
-        console.log('Sending email to:', this.data.to);
+        console.log("Sending email to:", this.data.to);
         // await sendEmail(this.data);
     }
 }
@@ -98,8 +98,8 @@ export class SendEmailJob extends Job {
 
 ```ts
 // src/aldareth.ts
-import { createAldareth } from 'aldareth';
-import { SendEmailJob } from './jobs/send-email.js';
+import { createAldareth } from "aldareth";
+import { SendEmailJob } from "./jobs/send-email.js";
 
 export default createAldareth({
     jobs: [SendEmailJob],
@@ -118,9 +118,9 @@ Once per database, before the first worker. It creates the table (MySQL) or the 
 ### 6. Dispatch from your app, run a worker
 
 ```ts
-import { SendEmailJob } from './jobs/send-email.js';
+import { SendEmailJob } from "./jobs/send-email.js";
 
-await SendEmailJob.dispatch({ to: 'user@example.com', subject: 'Hello' });
+await SendEmailJob.dispatch({ to: "user@example.com", subject: "Hello" });
 ```
 
 ```bash
@@ -133,13 +133,13 @@ The worker picks the job up, runs `handle()`, and removes it when it is done.
 
 Everything is resolved from the environment first, and from the config module second.
 
-| Setting             | Environment      | In code                     | Default         |
-| ------------------- | ---------------- | --------------------------- | --------------- |
-| Connection          | `ALDARETH_DB_URL` | `connection`                | required        |
-| Driver              | `ALDARETH_DRIVER` | `driver`                    | from the URI    |
-| Table/collection    | `ALDARETH_PREFIX` | `opts.prefix`               | `aldareth_`     |
-| Delete finished jobs | —                | `opts.removeOnComplete`     | `true`          |
-| Job classes         | —                | `jobs`                      | required        |
+| Setting              | Environment       | In code                 | Default      |
+| -------------------- | ----------------- | ----------------------- | ------------ |
+| Connection           | `ALDARETH_DB_URL` | `connection`            | required     |
+| Driver               | `ALDARETH_DRIVER` | `driver`                | from the URI |
+| Table/collection     | `ALDARETH_PREFIX` | `opts.prefix`           | `aldareth_`  |
+| Delete finished jobs | —                 | `opts.removeOnComplete` | `true`       |
+| Job classes          | —                 | `jobs`                  | required     |
 
 - The driver is `mysql` or `mongodb`; the URI scheme decides when `ALDARETH_DRIVER` is unset.
 - The environment wins over a URI written in code, so one build can be pointed at another
@@ -152,7 +152,7 @@ is not already set. The file never overrides an existing variable, so a producti
 environment always wins. Set `ALDARETH_NO_DOTENV=1` to turn the file off.
 
 ```ts
-import { createAldareth, defineConfig } from 'aldareth';
+import { createAldareth, defineConfig } from "aldareth";
 
 // defineConfig is optional — it only keeps the type without an explicit annotation
 export default defineConfig({ jobs: [SendEmailJob] });
@@ -190,7 +190,7 @@ interface EmailPayload {
 }
 
 export class SendEmailJob extends Job<EmailPayload> {
-    static jobName = 'send-email';
+    static jobName = "send-email";
 
     async handle() {
         await sendEmail(this.data.to, this.data.subject);
@@ -199,8 +199,8 @@ export class SendEmailJob extends Job<EmailPayload> {
 ```
 
 ```ts
-SendEmailJob.dispatch({ to: 'user@example.com', subject: 'Hello' }); // ok
-SendEmailJob.dispatch({ to: 'user@example.com' });                    // error: subject is missing
+SendEmailJob.dispatch({ to: "user@example.com", subject: "Hello" }); // ok
+SendEmailJob.dispatch({ to: "user@example.com" }); // error: subject is missing
 ```
 
 This is a compile-time guarantee only — the payload is stored as JSON, so nothing validates
@@ -209,14 +209,18 @@ it again when a worker picks the job up. A job without a type parameter takes `u
 ### Dispatching
 
 ```ts
-import { getDefaultQueue } from 'aldareth';
-import { ReportJob } from './jobs/report.js';
+import { getDefaultQueue } from "aldareth";
+import { ReportJob } from "./jobs/report.js";
 
 // through the class
 await ReportJob.dispatch({ month: 3 });
 
 // through the queue, with options
-await getDefaultQueue().dispatch(ReportJob, { month: 3 }, { delay: 30, queue: 'reports' });
+await getDefaultQueue().dispatch(
+    ReportJob,
+    { month: 3 },
+    { delay: 30, queue: "reports" },
+);
 ```
 
 | Option  | Type     | Description                       |
@@ -225,8 +229,8 @@ await getDefaultQueue().dispatch(ReportJob, { month: 3 }, { delay: 30, queue: 'r
 | `queue` | `string` | Queue to put the job in           |
 
 `Job.dispatch()` builds its queue from the environment on first use — no `createAldareth()`
-call and no import needed. Without `ALDARETH_DB_URL` it throws `Koneksi database belum
-diatur`.
+call and no import needed. Without `ALDARETH_DB_URL` it throws
+`Database connection is not configured`.
 
 Always `await` the dispatch. If the result is dropped, Aldareth prints a `dispatch() result
 was not awaited` warning: the request can finish before the job is enqueued.
@@ -238,7 +242,7 @@ A worker claims jobs, runs them, and settles the outcome. The entry point writte
 
 ```ts
 // src/worker.ts
-import aldareth from './aldareth.js';
+import aldareth from "./aldareth.js";
 
 aldareth.work({ stopWhenEmpty: true, maxTime: 55 }).catch((err) => {
     console.error(err);
@@ -246,12 +250,12 @@ aldareth.work({ stopWhenEmpty: true, maxTime: 55 }).catch((err) => {
 });
 ```
 
-| Option           | Type       | Default              | Description                            |
-| ---------------- | ---------- | -------------------- | -------------------------------------- |
-| `stopWhenEmpty`  | `boolean`  | `false`              | Exit as soon as the queues are empty   |
-| `maxTime`        | `number`   | `50`                 | Max runtime in seconds                 |
-| `maxJobs`        | `number`   | —                    | Stop after this many jobs              |
-| `queues`         | `string[]` | `['default']`        | Queues to listen on                    |
+| Option          | Type       | Default       | Description                          |
+| --------------- | ---------- | ------------- | ------------------------------------ |
+| `stopWhenEmpty` | `boolean`  | `false`       | Exit as soon as the queues are empty |
+| `maxTime`       | `number`   | `50`          | Max runtime in seconds               |
+| `maxJobs`       | `number`   | —             | Stop after this many jobs            |
+| `queues`        | `string[]` | `['default']` | Queues to listen on                  |
 
 The worker exits by itself when it is done — as soon as the queues are empty, or when
 `maxTime` is up. Whatever starts your processes (a process manager, a cron entry, your dev
@@ -260,19 +264,21 @@ loop) can start it again.
 To attach a custom reporter, build the worker yourself:
 
 ```ts
-import { Worker } from 'aldareth';
-import aldareth from './aldareth.js';
+import { Worker } from "aldareth";
+import aldareth from "./aldareth.js";
 
 const worker = new Worker(aldareth.driver, aldareth.registry, {
-    queues: ['default'],
+    queues: ["default"],
     maxTimeMs: 50_000,
     leaseSeconds: 110,
-    workerId: 'worker-1',
+    workerId: "worker-1",
     reporter,
 });
 
 const result = await worker.run();
 ```
+
+Every option is optional — the table below lists the defaults used when omitted.
 
 | Option          | Type       | Default              | Description                                  |
 | --------------- | ---------- | -------------------- | -------------------------------------------- |
@@ -296,25 +302,25 @@ running one finish.
 A reporter is a function that receives one event object.
 
 ```ts
-import type { Reporter } from 'aldareth';
+import type { Reporter } from "aldareth";
 
 const reporter: Reporter = (event) => {
-    if (event.type === 'job:fail') {
+    if (event.type === "job:fail") {
         console.error(`job ${event.name} failed: ${event.error}`);
     }
 };
 ```
 
-| Event            | Payload                                                   | Meaning                                          |
-| ---------------- | --------------------------------------------------------- | ------------------------------------------------ |
-| `worker:start`   | `workerId`, `queues`                                      | The worker started                               |
-| `job:start`      | `id`, `name`, `attempt`, `maxAttempts`                    | A job was claimed and is being handled           |
-| `job:done`       | `id`, `name`, `ms`                                        | A job finished successfully                      |
-| `job:retry`      | `id`, `name`, `ms`, `error`, `delaySeconds`, `attempt`, `maxAttempts` | A job failed and will be retried     |
-| `job:fail`       | `id`, `name`, `ms`, `error`                               | A job failed for good                            |
-| `job:defer`      | `id`, `name`                                              | Put back — not enough time left in this run      |
-| `job:lease-lost` | `id`, `name`                                              | Another worker took over the job                 |
-| `worker:stop`    | `processed`, `timedOut`                                   | The worker stopped                               |
+| Event            | Payload                                                               | Meaning                                     |
+| ---------------- | --------------------------------------------------------------------- | ------------------------------------------- |
+| `worker:start`   | `workerId`, `queues`                                                  | The worker started                          |
+| `job:start`      | `id`, `name`, `attempt`, `maxAttempts`                                | A job was claimed and is being handled      |
+| `job:done`       | `id`, `name`, `ms`                                                    | A job finished successfully                 |
+| `job:retry`      | `id`, `name`, `ms`, `error`, `delaySeconds`, `attempt`, `maxAttempts` | A job failed and will be retried            |
+| `job:fail`       | `id`, `name`, `ms`, `error`                                           | A job failed for good                       |
+| `job:defer`      | `id`, `name`                                                          | Put back — not enough time left in this run |
+| `job:lease-lost` | `id`, `name`                                                          | Another worker took over the job            |
+| `worker:stop`    | `processed`, `timedOut`                                               | The worker stopped                          |
 
 ## Scheduler
 
@@ -323,17 +329,27 @@ separate process that imports the config module.
 
 ```ts
 // src/schedule.ts
-import { Schedule } from 'aldareth';
-import aldareth from './aldareth.js';
-import { SendReportJob } from './jobs/send-report.js';
+import { Schedule } from "aldareth";
+import aldareth from "./aldareth.js";
+import { SendReportJob } from "./jobs/send-report.js";
 
 const schedule = new Schedule({
-    timezone: 'Asia/Jakarta',
+    timezone: "Asia/Jakarta",
     hasActive: (jobName) => aldareth.driver.hasActive(jobName),
 });
 
-schedule.job(SendReportJob).dailyAt('08:00');
-schedule.fn({ jobName: 'cleanup', handle: async () => { /* ... */ } }).everyFiveMinutes();
+schedule.job(SendReportJob, {}).dailyAt("08:00");
+schedule
+    .fn(
+        {
+            jobName: "cleanup",
+            handle: async () => {
+                /* ... */
+            },
+        },
+        {},
+    )
+    .everyFiveMinutes();
 
 export default schedule;
 ```
@@ -342,18 +358,18 @@ Run it from the entry point written by `init`:
 
 ```ts
 // src/run-schedule.ts
-import { scheduleRun } from 'aldareth';
-import schedule from './schedule.js';
+import { scheduleRun } from "aldareth";
+import schedule from "./schedule.js";
 
 // once: dispatch whatever is due this minute, then return
 scheduleRun(schedule, { once: true }).then(() => process.exit(0));
 ```
 
-| Option       | Type              | Default                  | Description                         |
-| ------------ | ----------------- | ------------------------ | ----------------------------------- |
-| `intervalMs` | `number`          | `60000`                  | How often to re-check the tasks    |
-| `onEvent`    | `(event) => void` | `consoleScheduleReporter` | Event reporter                     |
-| `once`       | `boolean`         | `false`                  | Run the due tasks, then return     |
+| Option       | Type              | Default                   | Description                     |
+| ------------ | ----------------- | ------------------------- | ------------------------------- |
+| `intervalMs` | `number`          | `60000`                   | How often to re-check the tasks |
+| `onEvent`    | `(event) => void` | `consoleScheduleReporter` | Event reporter                  |
+| `once`       | `boolean`         | `false`                   | Run the due tasks, then return  |
 
 Without `once` the same call loops forever, checking the tasks every minute. With `once` it
 runs a single pass — the mode for hosts where only cron is available. The explicit
@@ -364,41 +380,44 @@ config module instead of taking an instance.
 
 ### Frequency
 
-| Method                     | Cron equivalent    | Description                            |
-| -------------------------- | ------------------ | -------------------------------------- |
-| `everyMinute()`            | `* * * * *`        | Run every minute                       |
-| `everyMinutes(n)`          | `*/n * * * *`       | Run every n minutes (1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30) |
-| `everyFiveMinutes()`       | `*/5 * * * *`       | Run every five minutes                 |
-| `hourlyAt(minute)`         | `${m} * * * *`      | Minute past the hour (0–59)            |
-| `dailyAt(time)`            | `${m} ${h} * * *`   | Daily at `HH:MM`                       |
-| `weeklyOn(day, time)`      | `${m} ${h} * * ${d}` | Weekly on a day (0 = Sunday)         |
-| `monthlyOn(day, time)`     | `${m} ${h} ${d} * *` | Monthly on a day (1–28)              |
-| `monthlyOnLastDate(time)`  | `${m} ${h} L * *`   | Last day of the month                 |
+| Method                    | Cron equivalent      | Description                                                |
+| ------------------------- | -------------------- | ---------------------------------------------------------- |
+| `everyMinute()`           | `* * * * *`          | Run every minute                                           |
+| `everyMinutes(n)`         | `*/n * * * *`        | Run every n minutes (1, 2, 3, 4, 5, 6, 10, 12, 15, 20, 30) |
+| `everyFiveMinutes()`      | `*/5 * * * *`        | Run every five minutes                                     |
+| `hourlyAt(minute)`        | `${m} * * * *`       | Minute past the hour (0–59)                                |
+| `dailyAt(time)`           | `${m} ${h} * * *`    | Daily at `HH:MM`                                           |
+| `weeklyOn(day, time)`     | `${m} ${h} * * ${d}` | Weekly on a day (0 = Sunday)                               |
+| `monthlyOn(day, time)`    | `${m} ${h} ${d} * *` | Monthly on a day (1–28)                                    |
+| `monthlyOnLastDate(time)` | `${m} ${h} L * *`    | Last day of the month                                      |
 
 ### Task and schedule options
 
-| Option on a task   | Description                                          |
-| ------------------ | ---------------------------------------------------- |
-| `timezone(tz)`     | Timezone for this task                               |
+| Option on a task       | Description                                         |
+| ---------------------- | --------------------------------------------------- |
+| `timezone(tz)`         | Timezone for this task                              |
 | `withoutOverlapping()` | Skip the run while the previous job is still active |
-| `name(n)`          | Name used in reports (defaults to `jobName`)         |
+| `name(n)`              | Name used in reports (defaults to `jobName`)        |
 
-| Option on a schedule | Type                            | Default                  | Description                        |
-| -------------------- | ------------------------------- | ------------------------ | ---------------------------------- |
-| `timezone`           | `string`                        | `'UTC'`                  | Default timezone for tasks         |
-| `hasActive`          | `(jobName) => Promise<boolean>` | —                        | Required by `withoutOverlapping()` |
-| `onEvent`            | `(event) => void`               | `consoleScheduleReporter` | Event reporter                    |
+| Option on a schedule | Type                            | Default                   | Description                        |
+| -------------------- | ------------------------------- | ------------------------- | ---------------------------------- |
+| `timezone`           | `string`                        | `'UTC'`                   | Default timezone for tasks         |
+| `hasActive`          | `(jobName) => Promise<boolean>` | —                         | Required by `withoutOverlapping()` |
+| `onEvent`            | `(event) => void`               | `consoleScheduleReporter` | Event reporter                     |
 
 `withoutOverlapping()` asks the database whether a job with that name is still pending or
-running; without `hasActive` the schedule throws when the task is defined.
+running; without `hasActive` the schedule throws when the task is defined. It only applies
+to queued jobs (`schedule.job(...)`) — inline handlers (`schedule.fn(...)`) run one at a
+time in the scheduler process, so calling `withoutOverlapping()` on them throws.
 
 ### Schedule events
 
-| Event                      | Payload         | Meaning                                     |
-| -------------------------- | --------------- | ------------------------------------------- |
-| `schedule:dispatched`      | `task`          | The task was dispatched                     |
-| `schedule:skipped-overlap` | `task`          | Skipped — the previous run is still active  |
-| `schedule:error`           | `task`, `error` | The task handler threw                      |
+| Event                      | Payload         | Meaning                                    |
+| -------------------------- | --------------- | ------------------------------------------ |
+| `schedule:dispatched`      | `task`          | A queued job was dispatched to the queue   |
+| `schedule:ran`             | `task`          | An inline handler finished running         |
+| `schedule:skipped-overlap` | `task`          | Skipped — the previous run is still active |
+| `schedule:error`           | `task`, `error` | The task handler threw                     |
 
 One failing task does not stop the others.
 
@@ -425,13 +444,13 @@ default export is unwrapped for you.
 
 ### `queue:work`
 
-| Option              | Description                          | Default           |
-| ------------------- | ------------------------------------ | ----------------- |
+| Option              | Description                           | Default           |
+| ------------------- | ------------------------------------- | ----------------- |
 | `--queue`           | Queues to listen on (comma-separated) | `default`         |
-| `--max-time`        | Max runtime in seconds               | `50`              |
-| `--max-jobs`        | Stop after this many jobs            | —                 |
-| `--stop-when-empty` | Exit once every queue is empty       | `false`           |
-| `--module`          | Path to the config module            | `src/aldareth.ts` |
+| `--max-time`        | Max runtime in seconds                | `50`              |
+| `--max-jobs`        | Stop after this many jobs             | —                 |
+| `--stop-when-empty` | Exit once every queue is empty        | `false`           |
+| `--module`          | Path to the config module             | `src/aldareth.ts` |
 
 ```bash
 npx aldareth queue:work --queue emails,notifications --max-time 300 --stop-when-empty
@@ -439,10 +458,10 @@ npx aldareth queue:work --queue emails,notifications --max-time 300 --stop-when-
 
 ### `schedule:run`
 
-| Option     | Description                                    | Default           |
-| ---------- | ---------------------------------------------- | ----------------- |
-| `--module` | Path to the schedule module                    | `src/aldareth.ts` |
-| `--once`   | Dispatch the due tasks for this minute, then exit | `false`          |
+| Option     | Description                                       | Default           |
+| ---------- | ------------------------------------------------- | ----------------- |
+| `--module` | Path to the schedule module                       | `src/aldareth.ts` |
+| `--once`   | Dispatch the due tasks for this minute, then exit | `false`           |
 
 ## Production
 
@@ -500,18 +519,18 @@ standalone `mongod` is enough — no replica set, no transactions.
 
 ## Troubleshooting
 
-| Message / symptom                                   | Cause                                                  | Fix                                                        |
-| --------------------------------------------------- | ------------------------------------------------------ | ---------------------------------------------------------- |
-| `Koneksi database belum diatur`                     | No `ALDARETH_DB_URL` in the env and no `.env` in the cwd | Set the env var, or put it in `<cwd>/.env`                  |
-| `dispatch() result was not awaited`                 | The dispatch result was dropped                         | `await Job.dispatch(...)`, or add a `.catch(...)`           |
-| `[aldareth] ALDARETH_DB_URL is required`            | `migrate` ran without a connection                      | Set the env var for the process                            |
-| `MySQL URI harus dimulai dengan mysql://`           | The URI scheme does not match the driver               | Use a `mysql://` URI, or set `ALDARETH_DRIVER=mysql`        |
-| `MongoDB URI harus dimulai dengan mongodb://`       | The URI scheme does not match the driver               | Use a `mongodb://` URI, or set `ALDARETH_DRIVER=mongodb`    |
-| `ALDARETH_DRIVER tidak dikenal`                    | The driver name is not `mysql` or `mongodb`             | Use one of the two names                                   |
-| `Timeout job melebihi max-time atau lease worker`   | The job's `timeout` is longer than the worker's limits  | Lower the job timeout or raise `maxTime`                   |
-| `Table 'aldareth_jobs' doesn't exist`               | The migration was never run                            | Run `npm run aldareth:migrate`                             |
-| Jobs stay `processing` after a crash                | The worker died before releasing the job               | The lease expires and another worker picks the job up      |
-| `withoutOverlapping() needs hasActive`              | The schedule has no `hasActive`                        | Supply `hasActive` when creating the `Schedule`            |
+| Message / symptom                                 | Cause                                                    | Fix                                                      |
+| ------------------------------------------------- | -------------------------------------------------------- | -------------------------------------------------------- |
+| `Database connection is not configured`           | No `ALDARETH_DB_URL` in the env and no `.env` in the cwd | Set the env var, or put it in `<cwd>/.env`               |
+| `dispatch() result was not awaited`               | The dispatch result was dropped                          | `await Job.dispatch(...)`, or add a `.catch(...)`        |
+| `[aldareth] ALDARETH_DB_URL is required`          | `migrate` ran without a connection                       | Set the env var for the process                          |
+| `MySQL URI must start with mysql://`              | The URI scheme does not match the driver                 | Use a `mysql://` URI, or set `ALDARETH_DRIVER=mysql`     |
+| `MongoDB URI must start with mongodb://`          | The URI scheme does not match the driver                 | Use a `mongodb://` URI, or set `ALDARETH_DRIVER=mongodb` |
+| `Unknown ALDARETH_DRIVER`                         | The driver name is not `mysql` or `mongodb`              | Use one of the two names                                 |
+| `Job timeout exceeds the worker max-time or lease`| The job's `timeout` is longer than the worker's limits   | Lower the job timeout or raise `maxTime`                 |
+| `Table 'aldareth_jobs' doesn't exist`             | The migration was never run                              | Run `npm run aldareth:migrate`                           |
+| Jobs stay `processing` after a crash              | The worker died before releasing the job                 | The lease expires and another worker picks the job up    |
+| `withoutOverlapping() requires hasActive`         | The schedule has no `hasActive`                          | Supply `hasActive` when creating the `Schedule`          |
 
 ## Development
 
