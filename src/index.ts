@@ -7,8 +7,7 @@ import { createDriver, driverFromUri, resolveDriver } from './drivers/resolve.js
 import { Registry } from './core/registry.js';
 import { Queue, setDefaultQueue, getDefaultQueue } from './core/queue.js';
 import { Worker } from './worker/worker.js';
-import { Schedule, consoleScheduleReporter, type ScheduleEvent, type ScheduleOptions } from './scheduler/schedule.js';
-import { hostname } from 'node:os';
+import { Schedule, consoleScheduleReporter, type ScheduleEvent } from './scheduler/schedule.js';
 
 export interface AldarethConfigOptions {
     prefix?: string;
@@ -61,6 +60,36 @@ async function resolveSchedule(config: ScheduleConfig | undefined): Promise<Sche
     return schedule;
 }
 
+/** Single scheduler loop shared by the instance method and the standalone function. */
+async function runSchedule(schedule: Schedule, opts: ScheduleRunOptions): Promise<void> {
+    if (opts.onEvent || !schedule.opts.onEvent) {
+        schedule.opts = { ...schedule.opts, onEvent: opts.onEvent ?? consoleScheduleReporter };
+    }
+
+    // Run the due tasks immediately.
+    await schedule.run();
+    if (opts.once) return;
+
+    const intervalMs = opts.intervalMs ?? 60_000;
+    let running = true;
+    const stop = () => {
+        running = false;
+    };
+
+    process.on('SIGINT', stop);
+    process.on('SIGTERM', stop);
+    try {
+        while (running) {
+            await new Promise((resolve) => setTimeout(resolve, intervalMs));
+            if (!running) break;
+            await schedule.run();
+        }
+    } finally {
+        process.off('SIGINT', stop);
+        process.off('SIGTERM', stop);
+    }
+}
+
 export function createAldareth(config: AldarethConfig) {
     const driver = createDriver(config);
     const registry = new Registry();
@@ -78,13 +107,11 @@ export function createAldareth(config: AldarethConfig) {
     ) {
         const maxTime = opts.maxTime ?? 50;
         const worker = new Worker(driver, registry, {
-            queues: opts.queues ?? ['default'],
+            queues: opts.queues,
             maxTimeMs: maxTime * 1000,
             maxJobs: opts.maxJobs,
-            stopWhenEmpty: opts.stopWhenEmpty ?? false,
-            pollMs: 1000,
+            stopWhenEmpty: opts.stopWhenEmpty,
             leaseSeconds: maxTime + 60,
-            workerId: `${hostname()}:${process.pid}`,
         });
         const result = await worker.run();
         if (result.timedOut) process.exitCode = 1;
@@ -100,64 +127,14 @@ export function createAldareth(config: AldarethConfig) {
             _scheduleResolved = true;
         }
         if (!_schedule) throw new Error('No schedule configured');
-
-        if (opts.onEvent || !_schedule.opts.onEvent) {
-            _schedule.opts = {
-                ..._schedule.opts,
-                onEvent: opts.onEvent ?? consoleScheduleReporter,
-            };
-        }
-
-        // Run once immediately
-        await _schedule.run();
-        if (opts.once) return;
-
-        const intervalMs = opts.intervalMs ?? 60_000;
-        let running = true;
-        const stop = () => { running = false; };
-
-        process.on('SIGINT', stop);
-        process.on('SIGTERM', stop);
-
-        while (running) {
-            await new Promise((resolve) => setTimeout(resolve, intervalMs));
-            if (!running) break;
-            await _schedule!.run();
-        }
-
-        process.off('SIGINT', stop);
-        process.off('SIGTERM', stop);
+        await runSchedule(_schedule, opts);
     }
 
     return { queue, registry, driver, work, scheduleRun };
 }
 
 export async function scheduleRun(schedule: Schedule, opts: ScheduleRunOptions = {}) {
-    if (opts.onEvent || !schedule.opts.onEvent) {
-        schedule.opts = { ...schedule.opts, onEvent: opts.onEvent ?? consoleScheduleReporter };
-    }
-
-    // Run once immediately
-    await schedule.run();
-    if (opts.once) return;
-
-    const intervalMs = opts.intervalMs ?? 60_000;
-    let running = true;
-    const stop = () => {
-        running = false;
-    };
-
-    process.on('SIGINT', stop);
-    process.on('SIGTERM', stop);
-
-    while (running) {
-        await new Promise((resolve) => setTimeout(resolve, intervalMs));
-        if (!running) break;
-        await schedule.run();
-    }
-
-    process.off('SIGINT', stop);
-    process.off('SIGTERM', stop);
+    await runSchedule(schedule, opts);
 }
 
 export { Job, Queue, Registry, MysqlDriver, getDefaultQueue };
